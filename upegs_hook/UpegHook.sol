@@ -38,6 +38,10 @@ contract UpegHook is BaseHook, SvgGenerator, IRandomSeedProvider {
         token = IStartableToken(tokenAddress);
     }
 
+    function isTokenSetted() public view returns (bool) {
+        return address(token) != address(0);
+    }
+
     function randomSeed() external view override returns (uint256) {
         return _randomSeed;
     }
@@ -89,8 +93,9 @@ contract UpegHook is BaseHook, SvgGenerator, IRandomSeedProvider {
         BalanceDelta,
         bytes calldata
     ) internal override returns (bytes4, BalanceDelta) {
-        bool isToken = Currency.unwrap(key.currency1) == address(token) ||
-            Currency.unwrap(key.currency0) == address(token);
+        bool isToken = isTokenSetted() &&
+            (Currency.unwrap(key.currency1) == address(token) ||
+                Currency.unwrap(key.currency0) == address(token));
         if (isToken && !token.isStarted()) token.start(address(poolManager));
         return (BaseHook.afterAddLiquidity.selector, BalanceDelta.wrap(0));
     }
@@ -103,8 +108,9 @@ contract UpegHook is BaseHook, SvgGenerator, IRandomSeedProvider {
         bytes calldata
     ) internal override returns (bytes4, int128) {
         // Update randomSeed only for swaps involving our token.
-        bool isToken = Currency.unwrap(key.currency1) == address(token) ||
-            Currency.unwrap(key.currency0) == address(token);
+        bool isToken = isTokenSetted() &&
+            (Currency.unwrap(key.currency1) == address(token) ||
+                Currency.unwrap(key.currency0) == address(token));
         if (!isToken) return (BaseHook.afterSwap.selector, 0);
 
         _randomizeSeed();
